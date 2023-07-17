@@ -1,0 +1,23 @@
+- [ ] Design and implement appropriate data structures for games, teams, players, and ratings systems (ELO and MLB Predictions).
+- [ ] Build the application backend using Scala 3 and leverage the power of ZIO.
+- [ ] Utilize libraries such as `zio-jdbc`, `zio-streams`, `zio-json`, or `zio-http` for handling database operations, stream processing, JSON parsing, and HTTP application.
+- [ ] Implement a mechanism to initialize the H2 database engine at application startup using ZIO.
+- [ ] Create a dedicated endpoint or mechanism to trigger the database initialization process.
+- [ ] Implement endpoints for accessing game history and making predictions based on the MLB dataset.
+- [ ] Set up a Git repository to manage the application's source code.
+- [ ] Ensure the repository is well-organized, contains appropriate commits, and has a clear README file.
+- [ ] Write test cases to validate the functionality of the application.
+- [ ] Emphasize functional programming principles such as immutability, referential transparency, and composability where applicable.
+- [ ] Collaborate within the group and ensure active participation of each member.
+- [ ] Submit the project by the specified due date and time.
+- [x] Use English for code, comments, and documentation.
+- [ ] Provide Scala 3 code implementing the ZIO application, adhering to the given requirements and expectations.
+- [ ] Create a Git repository containing the code with appropriate commits and a README file.
+- [ ] Document the purpose, functionality, and usage of the application, along with any external libraries used.
+- [ ] Ensure correctness and functionality of the application implementation.
+- [ ] Design a quality data model and adhere to functional programming principles.
+- [ ] Effectively use ZIO and its ecosystem libraries.
+- [ ] Write comprehensive and effective tests covering various scenarios.
+- [ ] Organize code and provide clear documentation, including the README file.
+- [ ] Collaborate within the group and ensure active participation of each member.
+- [ ] Submit the project by the specified due date.
