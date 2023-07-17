@@ -11,6 +11,8 @@ ThisBuild / organization := "mlb"
 ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / scalaVersion := scala3Version
 
+ThisBuild / mainClass := Some("main.scala.mlb.MlbApi")
+
 lazy val commonSettings = Seq(
   libraryDependencies ++= Seq(
     "org.scalameta" %% "munit" % "0.7.29",
@@ -35,3 +37,4 @@ lazy val rest = project
       "com.github.tototoshi" %% "scala-csv" % scalaCsvVersion,
     )
   )
+
