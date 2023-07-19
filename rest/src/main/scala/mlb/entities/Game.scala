@@ -5,6 +5,20 @@ import zio.json.*
 import zio.jdbc.*
 
 import java.time.LocalDate
+import scala.annotation.targetName
+
+object GameIds {
+  opaque type GameId = Int
+  object GameId {
+    def apply(value: Int): GameId = value
+    def unapply(gameId: GameId): Int = gameId
+  }
+
+  given CanEqual[GameId, GameId] = CanEqual.derived
+
+  implicit val gameIdEncoder: JsonEncoder[GameId] = JsonEncoder.int
+  implicit val gameIdDecoder: JsonDecoder[GameId] = JsonDecoder.int
+}
 
 object HomeTeams {
   opaque type HomeTeam = String
@@ -17,6 +31,10 @@ object HomeTeams {
 
   implicit val homeTeamEncoder: JsonEncoder[HomeTeam] = JsonEncoder.string
   implicit val homeTeamDecoder: JsonDecoder[HomeTeam] = JsonDecoder.string
+
+  extension (homeTeam: HomeTeam) {
+    def toTeam: String = homeTeam
+  }
 }
 
 object AwayTeams {
@@ -32,6 +50,10 @@ object AwayTeams {
   given CanEqual[AwayTeam, AwayTeam] = CanEqual.derived
   implicit val awayTeamEncoder: JsonEncoder[AwayTeam] = JsonEncoder.string
   implicit val awayTeamDecoder: JsonDecoder[AwayTeam] = JsonDecoder.string
+
+  extension (awayTeam: AwayTeam) {
+    def toTeam: String = awayTeam
+  }
 }
 
 object HomeScores {
@@ -47,6 +69,10 @@ object HomeScores {
   given CanEqual[HomeScore, HomeScore] = CanEqual.derived
   implicit val homeScoreEncoder: JsonEncoder[HomeScore] = JsonEncoder.int
   implicit val homeScoreDecoder: JsonDecoder[HomeScore] = JsonDecoder.int
+
+  extension (homeScore: HomeScore) {
+    def toScore: Int = homeScore
+  }
 }
 
 object AwayScores {
@@ -63,6 +89,10 @@ object AwayScores {
   given CanEqual[AwayScore, AwayScore] = CanEqual.derived
   implicit val awayScoreEncoder: JsonEncoder[AwayScore] = JsonEncoder.int
   implicit val awayScoreDecoder: JsonDecoder[AwayScore] = JsonDecoder.int
+
+  extension (awayScore: AwayScore) {
+    def toScore: Int = awayScore
+  }
 }
 
 object HomeEloScores {
@@ -77,6 +107,10 @@ object HomeEloScores {
   given CanEqual[HomeEloScore, HomeEloScore] = CanEqual.derived
   implicit val eloScoreEncoder: JsonEncoder[HomeEloScore] = JsonEncoder.double
   implicit val eloScoreDecoder: JsonDecoder[HomeEloScore] = JsonDecoder.double
+
+  extension (eloScore: HomeEloScore) {
+    def toScore: Double = eloScore
+  }
 }
 
 object AwayEloScores {
@@ -86,6 +120,10 @@ object AwayEloScores {
   object AwayEloScore {
     def apply(value: Double): AwayEloScore = value
     def unapply(eloScore: AwayEloScore): Double = eloScore
+
+    extension (eloScore: AwayEloScore) {
+      def toScore: Double = eloScore
+    }
   }
 
   given CanEqual[AwayEloScore, AwayEloScore] = CanEqual.derived
@@ -218,6 +256,21 @@ object Game {
   // a custom decoder from a tuple
   type Row =
     (String, Int, String, String, Int, Int, Double, Double, Double, Double)
+
+  def fromRow(filteredRow: Seq[String]): Game = {
+    Game(
+      GameDate(LocalDate.parse(filteredRow.head)),
+      SeasonYear(filteredRow(1).toInt),
+      HomeTeam(filteredRow(4)),
+      AwayTeam(filteredRow(5)),
+      HomeScore(filteredRow(24).toIntOption.getOrElse(-1)),
+      AwayScore(filteredRow(25).toIntOption.getOrElse(-1)),
+      HomeEloScore(filteredRow(6).toDouble),
+      AwayEloScore(filteredRow(7).toDouble),
+      HomeEloProbability(filteredRow(8).toDouble),
+      AwayEloProbability(filteredRow(9).toDouble)
+    )
+  }
 
   extension (g: Game)
     def toRow: Row =
