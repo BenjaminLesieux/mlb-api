@@ -43,7 +43,16 @@ For that, we are using Case Classes in Scala to design data models for games, te
  ```
 
 We are reading the CSV thanks the ZIO library.
+After creating the table, we read the .csv located at the specified path.
+Processes the data using a ZStream that filters out non-empty rows and rows with a header "date," maps each row to a Game object using Game.fromRow(row), groups the games in batches of 1000, and then inserts each batch into the database using DatabaseConnector.insertRows(g.toList).
+Then closes the CSV reader after processing all the data.
 
+After the first block, there is a chain of subsequent flatMap operations that perform the following tasks:
+a. Prints "Database initialised !" to the console using printLine.
+b. Prints "Server is up at http://localhost:8080" to the console using printLine.
+c. Starts the server at http://localhost:8080 with endpoints defined in static and mlbGamesEndpoints.
+
+The final yield () means that the app effect returns Unit.
 
 ## Create the database
 
@@ -117,20 +126,11 @@ We are trying to figure out how to leverage ZIO using Scala 3 to build the appli
 `zio-http`: zio-http it enables us to create RESTful API endpoints that interact with the MLB dataset. We can define routes, handle HTTP requests, and respond with JSON data using zio-http's functional abstractions.
 
 
-## Database initialization and startup
-
-
-H2 is a disk-based or in-memory databases and tables, read-only database support, temporary tables. We need to figure out a mechanism to implement it. We are going to use ZIO to manage the initialization process to set up the required database schema. We also need to process the data so that it can be loaded, we are using a library from https://github.com/tototoshi/scala-csv .
-
-[DETAILS]
-
 ## Dedicated Endpoint for database initialization
 
 Endpoint is essential for automating the setup of the database with historical game data. It ensures a solid foundation for the backend.
 
 (Code of the decicated endpoint for database init)
-
-## OPTIONAL PART TO CHECK
 
 ## Endpoints for accessing game history and making predictions
 
