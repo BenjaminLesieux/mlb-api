@@ -24,29 +24,6 @@ import scala.util.Try
 object DatabaseConnector {
   type Data = List[List[Option[String]]]
 
-  def readGamesFromCSV(file: File): Seq[Game] = {
-    val reader = CSVReader.open(file)
-    Try {
-      val rows = reader.all()
-      rows.tail.flatMap { row =>
-        Try {
-          Game(
-            GameDate(LocalDate.parse(row.head)),
-            SeasonYear(row(1).toInt),
-            HomeTeam(row(4)),
-            AwayTeam(row(5)),
-            HomeScore(row(24).toIntOption.getOrElse(-1)),
-            AwayScore(row(25).toIntOption.getOrElse(-1)),
-            HomeEloScore(row(6).toDouble),
-            AwayEloScore(row(7).toDouble),
-            HomeEloProbability(row(8).toDouble),
-            AwayEloProbability(row(9).toDouble)
-          )
-        }.toOption
-      }
-    }
-  }
-
   val createZIOPoolConfig: ULayer[ZConnectionPoolConfig] =
     ZLayer.succeed(ZConnectionPoolConfig.default)
 
@@ -66,6 +43,7 @@ object DatabaseConnector {
     execute(
       sql"""
            CREATE TABLE IF NOT EXISTS games(
+            id SERIAL PRIMARY KEY,
             date DATE NOT NULL,
             season_year INT NOT NULL,
             home_team VARCHAR(3),
@@ -112,34 +90,71 @@ object DatabaseConnector {
     }
   }
 
-  def latestMatchOf(team: Either[HomeTeam, AwayTeam]): ZIO[ZConnectionPool, Throwable, Option[Game]] = {
+  def matchesBetween(team1: String, team2: String, limit: Option[Int]): ZIO[ZConnectionPool, Throwable, List[Game]] = {
     transaction {
-      selectOne(
+      selectAll(
         sql"""
-             SELECT * FROM games
-             WHERE home_team = ${team.fold(HomeTeam.unapply, AwayTeam.unapply)}
-             OR away_team = ${team.fold(HomeTeam.unapply, AwayTeam.unapply)}
-             ORDER BY date
-             DESC LIMIT 1
-           """
+                   SELECT * FROM games
+                   WHERE (home_team = $team1 AND away_team = $team2) OR (home_team = $team2 AND away_team = $team1)
+                   ORDER BY date
+                   DESC LIMIT ${limit.getOrElse(20)}
+                 """
           .as[Game]
-      )
+      ).map(_.toList)
     }
   }
 
-  def allMatches(team: Either[HomeTeam, AwayTeam]): ZIO[ZConnectionPool, Throwable, List[Game]] = {
+  def predictMatch(team1: HomeTeam, team2: AwayTeam, limit: Option[Int]): ZIO[ZConnectionPool, Throwable, List[Game]] = {
     transaction {
-      selectOne(
+      selectAll(
         sql"""
-             SELECT * FROM games
-             WHERE home_team = ${team.fold(HomeTeam.unapply, AwayTeam.unapply)}
-             OR away_team = ${team.fold(HomeTeam.unapply, AwayTeam.unapply)}
-             ORDER BY date
-             DESC
-           """
+                   SELECT * FROM games
+                   WHERE home_team = ${HomeTeam.unapply(team1)} AND away_team = ${AwayTeam.unapply(team2)}
+                   AND home_score != -1 AND away_score != -1
+                   ORDER BY date
+                   DESC LIMIT ${limit.getOrElse(20)}
+                 """
           .as[Game]
-      )
-    }.map(_.toList)
+      ).map(_.toList)
+    }
+  }
+
+  def allMatches(team: String, limit: Option[Int], filter: Option[String]): ZIO[ZConnectionPool, Throwable, List[Game]] = {
+    filter.getOrElse("all").toLowerCase() match {
+      case "away" => transaction {
+        selectAll(
+          sql"""
+               SELECT * FROM games
+               WHERE away_team = $team
+               ORDER BY date
+               DESC
+               LIMIT ${limit.getOrElse(20)}"""
+            .as[Game]
+        ).map(_.toList)
+      }
+      case "home" => transaction {
+          selectAll(
+          sql"""
+               SELECT * FROM games
+               WHERE home_team = $team
+               ORDER BY date
+               DESC
+               LIMIT ${limit.getOrElse(20)}"""
+              .as[Game]
+          ).map(_.toList)
+      }
+      case _ => transaction {
+        selectAll(
+          sql"""
+               SELECT * FROM games
+               WHERE home_team = $team OR away_team = $team
+               ORDER BY date
+               DESC
+               LIMIT ${limit.getOrElse(20)}"""
+            .as[Game]
+        ).map(_.toList)
+      }
+    }
   }
 
   def predictMatch(homeTeam: HomeTeam, awayTeam: AwayTeam): ZIO[ZConnectionPool, Throwable, List[Game]] = {
@@ -153,6 +168,20 @@ object DatabaseConnector {
              ORDER BY date
              DESC
              LIMIT 20"""
+          .as[Game]
+      ).map(_.toList)
+    }
+  }
+
+  def getGames(limit: Option[Int]): ZIO[ZConnectionPool, Throwable, List[Game]] = {
+    transaction {
+      selectAll(
+        sql"""
+             SELECT * FROM games
+             WHERE home_score != -1 AND away_score != -1
+             ORDER BY date
+             DESC
+             LIMIT ${limit.getOrElse(20)}"""
           .as[Game]
       ).map(_.toList)
     }
