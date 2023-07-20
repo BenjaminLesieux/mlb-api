@@ -12,10 +12,13 @@ import mlb.entities.AwayEloProbabilities.AwayEloProbability
 import mlb.entities.AwayScores.AwayScore
 import mlb.entities.HomeTeams.HomeTeam
 import mlb.entities.AwayTeams.AwayTeam
-import mlb.entities.Game
+import mlb.entities.{EloStats, Game}
+import mlb.entities.GameIds.GameId
+import mlb.entities.Pitchers.Pitcher
 import zio.*
 import zio.stream.*
-import zio.jdbc.{SqlFragment, UpdateResult, ZConnectionPool, ZConnectionPoolConfig, execute, insert, selectAll, selectOne, sqlInterpolator, transaction}
+import zio.jdbc.{JdbcDecoder, SqlFragment, UpdateResult, ZConnectionPool, ZConnectionPoolConfig, execute, insert, selectAll, selectOne, sqlInterpolator, transaction}
+import zio.json.JsonEncoder
 
 import java.io.File
 import java.time.LocalDate
@@ -53,7 +56,10 @@ object DatabaseConnector {
             home_elo DOUBLE,
             away_elo DOUBLE,
             home_prob_elo DOUBLE,
-            away_prob_elo DOUBLE)
+            away_prob_elo DOUBLE,
+            home_pitcher VARCHAR(50),
+            away_pitcher VARCHAR(50)
+            )
           """
     )
   }
@@ -63,7 +69,7 @@ object DatabaseConnector {
     transaction {
       insert(
         sql"""
-             INSERT INTO games(date, season_year, home_team, away_team, home_score, away_score, home_elo, away_elo, home_prob_elo, away_prob_elo)
+             INSERT INTO games(id, date, season_year, home_team, away_team, home_score, away_score, home_elo, away_elo, home_prob_elo, away_prob_elo, home_pitcher, away_pitcher)
            """
           .values[Game.Row](rows)
       )
@@ -157,19 +163,14 @@ object DatabaseConnector {
     }
   }
 
-  def predictMatch(homeTeam: HomeTeam, awayTeam: AwayTeam): ZIO[ZConnectionPool, Throwable, List[Game]] = {
+  def getGame(id: GameId): ZIO[ZConnectionPool, Throwable, Option[Game]] = {
     transaction {
-      selectAll(
+      selectOne(
         sql"""
              SELECT * FROM games
-             WHERE home_team = ${HomeTeam.unapply(homeTeam)}
-             AND away_team = ${AwayTeam.unapply(awayTeam)}
-             AND home_score != -1 AND away_score != -1
-             ORDER BY date
-             DESC
-             LIMIT 20"""
+             WHERE id = ${GameId.unapply(id)}"""
           .as[Game]
-      ).map(_.toList)
+      )
     }
   }
 
@@ -183,6 +184,54 @@ object DatabaseConnector {
              DESC
              LIMIT ${limit.getOrElse(20)}"""
           .as[Game]
+      ).map(_.toList)
+    }
+  }
+
+  def getTeams(limit: Option[Int]): ZIO[ZConnectionPool, Throwable, List[HomeTeam]] = {
+    transaction {
+      selectAll(
+        sql"""
+             SELECT DISTINCT home_team FROM games
+             ORDER BY home_team
+             LIMIT ${limit.getOrElse(20)}"""
+          .as[HomeTeam]
+      ).map(_.toList)
+    }
+  }
+
+  def getPitchers(team: HomeTeam, limit: Option[Int]): ZIO[ZConnectionPool, Throwable, List[Pitcher]] = {
+    transaction {
+      selectAll(
+        sql"""
+             SELECT DISTINCT * FROM (
+                SELECT home_pitcher FROM games
+                WHERE home_team = ${HomeTeam.unapply(team)} and home_pitcher != 'TBD'
+                UNION (
+                        SELECT away_pitcher FROM games
+                        WHERE away_team = ${HomeTeam.unapply(team)} and away_pitcher != 'TBD'
+                        )
+             ) as pitchers_at_home
+             """
+          .as[Pitcher]
+      ).map(_.toList)
+    }
+  }
+
+  def getEloStats(team: HomeTeam): ZIO[ZConnectionPool, Throwable, List[EloStats]] = {
+    transaction {
+      selectAll(
+        sql"""
+             SELECT team, elo_score, elo_prob FROM (
+                SELECT home_team as team, home_elo as elo_score, home_prob_elo as elo_prob FROM games
+                WHERE home_team = ${HomeTeam.unapply(team)}
+                UNION (
+                        SELECT away_team as team, away_elo as elo_score, away_prob_elo as elo_prob FROM games
+                        WHERE away_team = ${HomeTeam.unapply(team)}
+                        )
+             ) as elo_stats
+             """
+          .as[EloStats]
       ).map(_.toList)
     }
   }

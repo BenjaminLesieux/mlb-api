@@ -1,20 +1,21 @@
 package mlb
 
-import munit._
-import zio.http._
+import munit.*
+import zio.http.*
+import zio.jdbc.ZConnectionPool
+import mlb.MlbApi.validateEnv
 
 class MlbApiSpec extends munit.ZSuite {
 
-  val app: App[Any] = mlb.MlbApi.static
+  val app: App[ZConnectionPool] = mlb.MlbApi.mlbGamesEndpoints
 
-  testZ("should be ok") {
-
-    val req = Request.get(URL(Root / "Hello MLB Fans!"))
-    assertZ(app.runZIO(req).isSuccess)
-  }
-
-  testZ("should be ko") {
-    val req = Request.get(URL(Root))
-    assertZ(app.runZIO(req).isFailure)
+  testZ("should return 501 Not Implemented for /init") {
+    val req = Request.get(URL(Root / "init"))
+    assertEqualsZ(
+      app
+        .runZIO(req)
+        .map(_.status),
+      Status.Ok
+    )
   }
 }

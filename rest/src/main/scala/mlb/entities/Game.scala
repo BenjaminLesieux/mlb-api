@@ -1,6 +1,8 @@
 package mlb.entities
 
+import mlb.entities.GameIds.GameId
 import mlb.entities.HomeEloScores.HomeEloScore
+import mlb.entities.Pitchers.Pitcher
 import zio.json.*
 import zio.jdbc.*
 
@@ -20,6 +22,23 @@ object GameIds {
   implicit val gameIdDecoder: JsonDecoder[GameId] = JsonDecoder.int
 }
 
+object Pitchers {
+  opaque type Pitcher = String
+  object Pitcher {
+      def apply(value: String): Pitcher = value
+      def unapply(pitcher: Pitcher): String = pitcher match
+        case "" => "TBD"
+        case _ => pitcher
+  }
+
+  given CanEqual[Pitcher, Pitcher] = CanEqual.derived
+
+  implicit val pitcherEncoder: JsonEncoder[Pitcher] = JsonEncoder.string
+  implicit val pitcherDecoder: JsonDecoder[Pitcher] = JsonDecoder.string
+
+  implicit val pitcherJdbcDecoder: JdbcDecoder[Pitcher] = JdbcDecoder.stringDecoder
+}
+
 object HomeTeams {
   opaque type HomeTeam = String
   object HomeTeam {
@@ -31,6 +50,8 @@ object HomeTeams {
 
   implicit val homeTeamEncoder: JsonEncoder[HomeTeam] = JsonEncoder.string
   implicit val homeTeamDecoder: JsonDecoder[HomeTeam] = JsonDecoder.string
+
+  implicit val homeTeamJdbcDecoder: JdbcDecoder[HomeTeam] = JdbcDecoder.stringDecoder
 
   extension (homeTeam: HomeTeam) {
     def toTeam: String = homeTeam
@@ -144,6 +165,10 @@ object HomeEloProbabilities {
   given CanEqual[HomeEloProbability, HomeEloProbability] = CanEqual.derived
   implicit val homeEloProbabilityEncoder: JsonEncoder[HomeEloProbability] = JsonEncoder.double
   implicit val homeEloProbabilityDecoder: JsonDecoder[HomeEloProbability] = JsonDecoder.double
+
+  extension(homeEloProbability: HomeEloProbability) {
+    def toScore: Double = homeEloProbability
+  }
 }
 
 object AwayEloProbabilities {
@@ -159,6 +184,10 @@ object AwayEloProbabilities {
   given CanEqual[AwayEloProbability, AwayEloProbability] = CanEqual.derived
   implicit val awayEloProbabilityEncoder: JsonEncoder[AwayEloProbability] = JsonEncoder.double
   implicit val awayEloProbabilityDecoder: JsonDecoder[AwayEloProbability] = JsonDecoder.double
+
+  extension(awayEloProbability: AwayEloProbability) {
+    def toScore: Double = awayEloProbability
+  }
 }
 
 object GameDates {
@@ -208,6 +237,7 @@ import AwayEloProbabilities.*
 
 // Creating Game class
 final case class Game(
+    id: GameId,
     date: GameDate,
     season: SeasonYear,
     homeTeam: HomeTeam,
@@ -217,7 +247,9 @@ final case class Game(
     homeElo: HomeEloScore,
     awayElo: AwayEloScore,
     homeProbElo: HomeEloProbability,
-    awayProbElo: AwayEloProbability
+    awayProbElo: AwayEloProbability,
+    homePitcher: Pitcher,
+    awayPitcher: Pitcher
 )
 
 object Game {
@@ -229,6 +261,7 @@ object Game {
   def unapply(
       game: Game
   ): (
+      GameId,
       GameDate,
       SeasonYear,
       HomeTeam,
@@ -238,9 +271,12 @@ object Game {
       HomeEloScore,
       AwayEloScore,
       HomeEloProbability,
-      AwayEloProbability
+      AwayEloProbability,
+      Pitcher,
+      Pitcher
   ) =
     (
+      game.id,
       game.date,
       game.season,
       game.homeTeam,
@@ -250,15 +286,18 @@ object Game {
       game.homeElo,
       game.awayElo,
       game.homeProbElo,
-      game.awayProbElo
+      game.awayProbElo,
+      game.homePitcher,
+      game.awayPitcher
     )
 
   // a custom decoder from a tuple
   type Row =
-    (String, Int, String, String, Int, Int, Double, Double, Double, Double)
+    (Int, String, Int, String, String, Int, Int, Double, Double, Double, Double, String, String)
 
-  def fromRow(filteredRow: Seq[String]): Game = {
+  def fromRow(filteredRow: Seq[String], idx: Int = 0): Game = {
     Game(
+      GameId(idx),
       GameDate(LocalDate.parse(filteredRow.head)),
       SeasonYear(filteredRow(1).toInt),
       HomeTeam(filteredRow(4)),
@@ -268,14 +307,17 @@ object Game {
       HomeEloScore(filteredRow(6).toDouble),
       AwayEloScore(filteredRow(7).toDouble),
       HomeEloProbability(filteredRow(8).toDouble),
-      AwayEloProbability(filteredRow(9).toDouble)
+      AwayEloProbability(filteredRow(9).toDouble),
+      Pitcher(filteredRow(14)),
+      Pitcher(filteredRow(15))
     )
   }
 
   extension (g: Game)
     def toRow: Row =
-      val (d, y, h, a, hs, as, he, ae, hpe, ape) = Game.unapply(g)
+      val (id, d, y, h, a, hs, as, he, ae, hpe, ape, hPitch, aPitch) = Game.unapply(g)
       (
+        GameId.unapply(id),
         GameDate.unapply(d).toString,
         SeasonYear.unapply(y),
         HomeTeam.unapply(h),
@@ -285,12 +327,15 @@ object Game {
         HomeEloScore.unapply(he),
         AwayEloScore.unapply(ae),
         HomeEloProbability.unapply(hpe),
-        AwayEloProbability.unapply(ape)
+        AwayEloProbability.unapply(ape),
+        Pitcher.unapply(hPitch),
+        Pitcher.unapply(aPitch)
       )
 
   implicit val jdbcDecoder: JdbcDecoder[Game] = JdbcDecoder[Row]().map[Game] {
     t =>
       val (
+        id,
         date,
         season,
         home,
@@ -300,9 +345,12 @@ object Game {
         homeElo,
         awayElo,
         homeProbElo,
-        awayProbElo
+        awayProbElo,
+        homePitcher,
+        awayPitcher
       ) = t
       Game(
+        GameId(id),
         GameDate(LocalDate.parse(date)),
         SeasonYear(season),
         HomeTeam(home),
@@ -312,7 +360,20 @@ object Game {
         HomeEloScore(homeElo),
         AwayEloScore(awayElo),
         HomeEloProbability(homeProbElo),
-        AwayEloProbability(awayProbElo)
+        AwayEloProbability(awayProbElo),
+        Pitcher(homePitcher),
+        Pitcher(awayPitcher)
       )
   }
+}
+
+case class EloStats(team: HomeTeam, elo_score: HomeEloScore, elo_prob: AwayEloScore)
+
+object EloStats {
+  implicit val decoder: JdbcDecoder[EloStats] = JdbcDecoder[(String, Double, Double)]().map[EloStats] { e =>
+    val (team, elo_score, elo_prob) = e
+    EloStats(HomeTeam(team), HomeEloScore(elo_score), AwayEloScore(elo_prob))
+  }
+  implicit val jsonEncoder: JsonEncoder[EloStats] = DeriveJsonEncoder.gen[EloStats]
+  implicit val jsonDecoder: JsonDecoder[EloStats] = DeriveJsonDecoder.gen[EloStats]
 }

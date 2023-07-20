@@ -4,6 +4,7 @@ import com.github.tototoshi.csv.CSVReader
 import com.github.tototoshi.csv.defaultCSVFormat
 import io.netty.handler.codec.http.QueryStringDecoder
 import mlb.entities.AwayTeams.AwayTeam
+import mlb.entities.GameIds.GameId
 import mlb.persistence.DatabaseConnector
 import sun.security.provider.NativePRNG.Blocking
 import zio.*
@@ -21,7 +22,7 @@ import scala.util.Try
 
 object MlbApi extends ZIOAppDefault {
 
-  private val static: App[ZConnectionPool] =
+  val static: App[ZConnectionPool] =
     Http
       .collectZIO[Request] {
         case Method.GET -> Root =>
@@ -31,7 +32,7 @@ object MlbApi extends ZIOAppDefault {
       }
       .withDefaultErrorResponse
 
-  private val mlbGamesEndpoints: App[ZConnectionPool] =
+  val mlbGamesEndpoints: App[ZConnectionPool] =
     Http.collectZIO[Request] {
       case request @ Method.GET -> Root / "games"  =>
         val limit = request.url.queryParams.get("limit").map(_.head.toInt)
@@ -52,8 +53,32 @@ object MlbApi extends ZIOAppDefault {
       case request @ Method.GET -> Root / "prediction" / "teams" / team1 / "against" / team2 =>
         val limit = request.url.queryParams.get("limit").map(_.head.toInt)
         for {
-          games: List[Game] <- DatabaseConnector.predictMatch(HomeTeam(team1), AwayTeam(team2))
+          games: List[Game] <- DatabaseConnector.predictMatch(HomeTeam(team1), AwayTeam(team2), limit)
         } yield MlbService.predictMatch(games, HomeTeam(team1), AwayTeam(team2))
+      case Method.GET -> Root / "games" / gameId =>
+        for {
+          game <- DatabaseConnector.getGame(GameId(gameId.toIntOption.getOrElse(-1)))
+        } yield MlbService.getGame(game)
+      case request @ Method.GET -> Root / "teams" =>
+        val limit = request.url.queryParams.get("limit").map(_.head.toInt)
+        for {
+          teams <- DatabaseConnector.getTeams(limit)
+        } yield MlbService.getTeams(teams)
+      case request @ Method.GET -> Root / "games" / "predict" / "teams" / team1 / "against" / team2 =>
+        val limit = request.url.queryParams.get("limit").map(_.head.toInt)
+        for {
+          games: List[Game] <- DatabaseConnector.predictMatch(HomeTeam(team1), AwayTeam(team2), limit)
+        } yield MlbService.predictMatch(games, HomeTeam(team1), AwayTeam(team2))
+      case request @ Method.GET -> Root / "teams" / team / "pitchers" =>
+        val limit = request.url.queryParams.get("limit").map(_.head.toInt)
+        for {
+          pitchers <- DatabaseConnector.getPitchers(HomeTeam(team), limit)
+        } yield MlbService.getPitchers(pitchers)
+      case Method.GET -> Root / "teams" / team / "eloStats" =>
+        for {
+          eloStats <- DatabaseConnector.getEloStats(HomeTeam(team))
+        } yield MlbService.getEloStats(eloStats)
+
     }.withDefaultErrorResponse
 
 
@@ -65,7 +90,8 @@ object MlbApi extends ZIOAppDefault {
       })
       games <- ZStream.fromIterator[Seq[String]](data.iterator)
         .filter(row => row.nonEmpty && row.head != "date")
-        .map[Game](row => Game.fromRow(row))
+        .zipWithIndex
+        .map[Game]((row, idx) => Game.fromRow(row, idx.toInt))
         .grouped(1000)
         .foreach(g => DatabaseConnector.insertRows(g.toList))
       _ <- ZIO.succeed(data.close())
