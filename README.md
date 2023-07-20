@@ -137,16 +137,65 @@ Endpoint is essential for automating the setup of the database with historical g
 An endpoint is a service that natively listen to requests. It is a point of entry into an SQL server, rather a way to connect to an SQL Serverinstance.
 Endpoints play a crucial role in building a RESTful API. They serve as the gateways for clients to interact with the backend application and access specific functionalities. These endpoints act as the entry points to our application, allowing users to retrieve valuable data and make predictions for future games.
 
-Exemple of our Endpoints :
+Our Endpoints : 
 
+```scala
+val mlbGamesEndpoints: App[ZConnectionPool] = // Creation of endpoints
+    Http.collectZIO[Request] { // get a request and return a ZIO
+      case request @ Method.GET -> Root / "games"  => // This endpoints is for get all games
+        val limit = request.url.queryParams.get("limit").map(_.head.toInt)
+        for {
+          games: List[Game] <- DatabaseConnector.getGames(limit)
+        } yield MlbService.getGames(games)
+      case request @ Method.GET -> Root / "games" / "teams" / team => // All games per teams
+        val limit = request.url.queryParams.get("limit").map(_.head.toInt)
+        val filter = request.url.queryParams.get("filter").map(_.head)
+        for {
+          games: List[Game] <- DatabaseConnector.allMatches(team, limit, filter)
+        } yield MlbService.getGames(games)
+      case request @ Method.GET -> Root / "games" / "matchups" / team1 / "against" / team2 => // matchups between two teams
+        val limit = request.url.queryParams.get("limit").map(_.head.toInt)
+        for {
+          games: List[Game] <- DatabaseConnector.matchesBetween(team1, team2, limit)
+        } yield MlbService.getMatchAgainst(games)
+      case request @ Method.GET -> Root / "prediction" / "teams" / team1 / "against" / team2 => // Details between two teams
+        val limit = request.url.queryParams.get("limit").map(_.head.toInt)
+        for {
+          games: List[Game] <- DatabaseConnector.predictMatch(HomeTeam(team1), AwayTeam(team2), limit)
+        } yield MlbService.predictMatch(games, HomeTeam(team1), AwayTeam(team2))
+      case Method.GET -> Root / "games" / gameId => // get game ID 
+        for {
+          game <- DatabaseConnector.getGame(GameId(gameId.toIntOption.getOrElse(-1)))
+        } yield MlbService.getGame(game)
+      case request @ Method.GET -> Root / "teams" => // get all teams
+        val limit = request.url.queryParams.get("limit").map(_.head.toInt)
+        for {
+          teams <- DatabaseConnector.getTeams(limit)
+        } yield MlbService.getTeams(teams)
+      case request @ Method.GET -> Root / "games" / "predict" / "teams" / team1 / "against" / team2 => // Predict the winner teams between two teams
+        val limit = request.url.queryParams.get("limit").map(_.head.toInt)
+        for {
+          games: List[Game] <- DatabaseConnector.predictMatch(HomeTeam(team1), AwayTeam(team2), limit)
+        } yield MlbService.predictMatch(games, HomeTeam(team1), AwayTeam(team2))
+      case request @ Method.GET -> Root / "teams" / team / "pitchers" => // get details about pitchers in teams
+        val limit = request.url.queryParams.get("limit").map(_.head.toInt)
+        for {
+          pitchers <- DatabaseConnector.getPitchers(HomeTeam(team), limit)
+        } yield MlbService.getPitchers(pitchers)
+      case Method.GET -> Root / "teams" / team / "eloStats" => // Get elo of teams
+        for {
+          eloStats <- DatabaseConnector.getEloStats(HomeTeam(team))
+        } yield MlbService.getEloStats(eloStats)
 
-We should be implementing additional endpoints so that the user can fetch data about game histories and also make predictions for future games. Endpoints are designed to provide all the relevant information and facilitate interaction with the MLB dataset.
+    }.withDefaultErrorResponse
+```
 
-[DETAILS]
+*Note: You can make the queries in the postman link we'll give you. These endpoints allow you to make the requested queries and display the results. All data comes from the dataset.*
+
 
 ## TEST PART
 
-This part eventually focuses on the functional properties of our application. Functional programming principles such as immutability, composability etc are to be emphasized and we need to expand our view so that we can enhance the modularity and maintainability of our project.
+Finally, this section focuses on the functional properties of our application. We've decided to show you some screen tests of the different results we can achieve with POSTMAN and our code.
 
 Let's see now some exemple with POSTMAN tools :
 
