@@ -3,7 +3,7 @@
 # ZIO Application Backend
 ### by LESIEUX Benjamin - LIU Senhua -  MARIOTTE Thomas - PHAM Van Alenn
 
-We are coding altogether on IntelliJ
+We coded together with JetBrains tools hosted by Benjamin.
 
 
 ### **Features**
@@ -18,6 +18,8 @@ For that, we are using Case Classes in Scala to design data models for games, te
 - `Data Model`: The project employs a well-designed data model that represents games, teams, players, and the two rating systems (ELO and MLB Predictions).
 
 - `ZIO Ecosystem`: Leveraging the ZIO ecosystem, the project incorporates libraries like zio-jdbc, zio-streams, zio-json, and zio-http. This ensures the application's backend benefits from ZIO's concurrency capabilities, functional composability, and handling of database operations, streaming, JSON parsing, and HTTP interactions.
+
+# Data Strucutre
 
 ## Read the CSV
 
@@ -42,7 +44,7 @@ For that, we are using Case Classes in Scala to design data models for games, te
   } yield ()
  ```
 
-We are reading the CSV thanks the ZIO library.
+▶️ We are reading the CSV thanks the ZIO library.
 After creating the table, we read the .csv located at the specified path.
 Processes the data using a ZStream that filters out non-empty rows and rows with a header "date," maps each row to a Game object using Game.fromRow(row), groups the games in batches of 1000, and then inserts each batch into the database using DatabaseConnector.insertRows(g.toList).
 Then closes the CSV reader after processing all the data.
@@ -126,11 +128,7 @@ We are trying to figure out how to leverage ZIO using Scala 3 to build the appli
 `zio-http`: zio-http it enables us to create RESTful API endpoints that interact with the MLB dataset. We can define routes, handle HTTP requests, and respond with JSON data using zio-http's functional abstractions.
 
 
-## Dedicated Endpoint for database initialization
-
-Endpoint is essential for automating the setup of the database with historical game data. It ensures a solid foundation for the backend.
-
-(Code of the decicated endpoint for database init)
+# MlbAPI.scala
 
 ## Endpoints for accessing game history and making predictions
 
