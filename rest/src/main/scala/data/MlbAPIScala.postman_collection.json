@@ -1,0 +1,235 @@
+{
+	"info": {
+		"_postman_id": "f7631ac3-df08-4944-a64a-c06603b7a086",
+		"name": "MlbAPIScala",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "15038099"
+	},
+	"item": [
+		{
+			"name": "Check if API is up",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Check if db was initialized at startup",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/init",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"init"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Show the n last games",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/games?limit=5",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"games"
+					],
+					"query": [
+						{
+							"key": "limit",
+							"value": "5",
+							"description": "Show n games by changing this parameter"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get game from id",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/games/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"games",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Show the last n games of a team",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/games/teams/NYM?limit=5&filter=away",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"games",
+						"teams",
+						"NYM"
+					],
+					"query": [
+						{
+							"key": "limit",
+							"value": "5",
+							"description": "the limit of games showed"
+						},
+						{
+							"key": "filter",
+							"value": "away",
+							"description": "away = shows only away games, home = show only home games, _ = no filter"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Show n latest games between a team and another",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/games/matchups/NYM/against/ATL?limit=4",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"games",
+						"matchups",
+						"NYM",
+						"against",
+						"ATL"
+					],
+					"query": [
+						{
+							"key": "limit",
+							"value": "4",
+							"description": "Show the n last matchups"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Show all the teams",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/teams?limit=10",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"teams"
+					],
+					"query": [
+						{
+							"key": "limit",
+							"value": "10"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Predict match between two teams",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/games/predict/teams/ANA/against/ARI",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"games",
+						"predict",
+						"teams",
+						"ANA",
+						"against",
+						"ARI"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "See all pitchers from all games of a team",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/teams/NYL/pitchers",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"teams",
+						"NYL",
+						"pitchers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "See the mean of some elo stats",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		}
+	]
+}

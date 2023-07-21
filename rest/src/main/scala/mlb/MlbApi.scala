@@ -86,6 +86,7 @@ object MlbApi extends ZIOAppDefault {
     _ <- for {
       conn <- DatabaseConnector.create
       data <- ZIO.fromTry(Try {
+        // change with ./mlb_elo.csv
         CSVReader.open(new File("/Users/benjaminlesieux/Desktop/Bureau - MacBook Pro de Benjamin (4) - 1/efrei/M1/S8/Functional Programming/mlb-api/rest/src/mlb_elo.csv"))
       })
       games <- ZStream.fromIterator[Seq[String]](data.iterator)

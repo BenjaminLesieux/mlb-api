@@ -19,9 +19,65 @@ For that, we are using Case Classes in Scala to design data models for games, te
 
 - `ZIO Ecosystem`: Leveraging the ZIO ecosystem, the project incorporates libraries like zio-jdbc, zio-streams, zio-json, and zio-http. This ensures the application's backend benefits from ZIO's concurrency capabilities, functional composability, and handling of database operations, streaming, JSON parsing, and HTTP interactions.
 
-# Data Strucutre
+# Data Structure
+
+First, our program is divided in multiple parts, as an API should. 
+We have our root directory containing our main class and the csv file. 
+But then all the database logic is handled in the "persistance" package.
+The "entities" package contains all the case classes (& opaque types) that we use to represent our data.
+The "services" package contains all the logic that we use to manipulate our data.
+
+## Entities
+
+### Game
+
+```scala
+final case class Game(
+    id: GameId,
+    date: GameDate,
+    season: SeasonYear,
+    homeTeam: HomeTeam,
+    awayTeam: AwayTeam,
+    homeScore: HomeScore,
+    awayScore: AwayScore,
+    homeElo: HomeEloScore,
+    awayElo: AwayEloScore,
+    homeProbElo: HomeEloProbability,
+    awayProbElo: AwayEloProbability,
+    homePitcher: Pitcher,
+    awayPitcher: Pitcher
+)
+```
+
+Our program is mainly based on this case class. All the other types are just aliases to make the code more readable. 
+We decided to use opaque types because it made our code more clear and easy to read.
+
+# Services
+
+The "MlbService" class contains all the logic that we use to manipulate our data.
+Each functions performs an operation with the output from the database and returns a response.
+
+```scala
+object MlbService {
+  def getGames(games: List[Game]): Response = {
+    games match {
+      case games if games.nonEmpty => Response.json(games.toJson).withStatus(Status.Ok)
+      case _ => Response.text("No games were found").withStatus(Status.NotFound)
+    }
+  }
+
+  def getGame(game: Option[Game]): Response = {
+    game match {
+      case Some(game) => Response.json(game.toJson).withStatus(Status.Ok)
+      case None => Response.text("No game was found").withStatus(Status.NotFound)
+    }
+  }
+
+```
 
 ## Read the CSV
+
+Our database is handled with h2 and we use the zio-jdbc library to interact with it. As we are using ZIO, we need to use the ZIO library to read the CSV file.
 
 ```scala
   val app: ZIO[ZConnectionPool & Server, Throwable, Unit] = for {
@@ -116,7 +172,6 @@ After create the table (needed to read the .csv), we can do ZIO effect like inse
 
 ## ZIO and related libraries
 
-
 We are trying to figure out how to leverage ZIO using Scala 3 to build the application backend. Hence, we can use the libraries such as zio-jdbc, zio-streams, zio-json, zio-http. The ultimate goal is to be able to parse JSON files to fetch data previously recorded along the years about the MLB.
 
 **Screen des libraries**
@@ -138,6 +193,12 @@ An endpoint is a service that natively listen to requests. It is a point of entr
 Endpoints play a crucial role in building a RESTful API. They serve as the gateways for clients to interact with the backend application and access specific functionalities. These endpoints act as the entry points to our application, allowing users to retrieve valuable data and make predictions for future games.
 
 Our Endpoints : 
+
+You can see that we sometimes retrieve the request object. We use this object to handle query parameters in the request. 
+This allows us to make more flexible requests. 
+
+For example, we can retrieve the last 10 games between two teams by sending a GET request to /games/teams/{team}?limit=10.
+Or we can retrieve the last 10 games of a team playing at home with a GET request to /games/teams/{team}?limit=10&filter=home.
 
 ```scala
 val mlbGamesEndpoints: App[ZConnectionPool] = // Creation of endpoints
@@ -190,7 +251,9 @@ val mlbGamesEndpoints: App[ZConnectionPool] = // Creation of endpoints
     }.withDefaultErrorResponse
 ```
 
-*Note: You can make the queries in the postman link we'll give you. These endpoints allow you to make the requested queries and display the results. All data comes from the dataset.*
+*Note: You can make the queries with the postman collection in the data folder. These endpoints allow you to make the requested queries and display the results. All data comes from the dataset.*
+
+
 
 
 ## TEST PART
