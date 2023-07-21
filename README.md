@@ -26,16 +26,18 @@ For that, we are using Case Classes in Scala to design data models for games, te
 ```scala
   val app: ZIO[ZConnectionPool & Server, Throwable, Unit] = for {
     _ <- for {
-      conn <- DatabaseConnector.create // Creation of the Database Connector
+      conn <- DatabaseConnector.create
       data <- ZIO.fromTry(Try {
-        CSVReader.open(new File("/src/mlb_elo.csv")) // Location of our dataset
+        // on my case i was forced to put the absolute path, normally ./mlb_elo.csv should work
+        CSVReader.open(new File("/Users/benjaminlesieux/Desktop/Bureau - MacBook Pro de Benjamin (4) - 1/efrei/M1/S8/Functional Programming/mlb-api/rest/src/main/scala/mlb/mlb_elo.csv"))
       })
       games <- ZStream.fromIterator[Seq[String]](data.iterator)
         .filter(row => row.nonEmpty && row.head != "date")
-        .map[Game](row => Game.fromRow(row))
+        .zipWithIndex
+        .map[Game]((row, idx) => Game.fromRow(row, idx.toInt))
         .grouped(1000)
         .foreach(g => DatabaseConnector.insertRows(g.toList))
-      _ <- ZIO.succeed(data.close()) // Function for clearer dataset display
+      _ <- ZIO.succeed(data.close())
       result <- ZIO.succeed(conn)
     } yield result
     _ <- printLine("Database initialised !")
@@ -46,7 +48,7 @@ For that, we are using Case Classes in Scala to design data models for games, te
 
 ▶️ We are reading the CSV thanks the ZIO library.
 After creating the table, we read the .csv located at the specified path.
-Processes the data using a ZStream that filters out non-empty rows and rows with a header "date," maps each row to a Game object using Game.fromRow(row), groups the games in batches of 1000, and then inserts each batch into the database using DatabaseConnector.insertRows(g.toList).
+We process the data using a ZStream that filters out non-empty rows and rows with a header "date," and them map each row to a Game object using Game.fromRow(row, idx), we then group the games in batches of 1000, and then inserts each batch into the database using DatabaseConnector.insertRows(g.toList).
 Then closes the CSV reader after processing all the data.
 
 After the first block, there is a chain of subsequent flatMap operations that perform the following tasks:
