@@ -193,16 +193,6 @@ val mlbGamesEndpoints: App[ZConnectionPool] = // Creation of endpoints
 
 ## TEST PART
 
-Finally, this section focuses on the functional properties of our application. We've decided to show you some screen tests of the different results we can achieve with POSTMAN and our code.
+Unfortunately, we haven't been able to carry out any tests. The lack of documentation on the ZIO meant that we didn't understand/succeed in testing it. 
 
-Let's see now some exemple with POSTMAN tools :
-
-(Screen 1)
-
-For exemple here we can see all matches.
-
-(Screen 2)
-
-But we can also see all matches from the same team.
-
-So the database is link to our code and endpoints works well.
+Lack of time was also an obstacle to success.
