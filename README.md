@@ -250,7 +250,23 @@ val mlbGamesEndpoints: App[ZConnectionPool] = // Creation of endpoints
 
     }.withDefaultErrorResponse
 ```
+## A few examples of how endpoints are made : 
+## GET /games - Get all games
+Description: Retrieves all games.
+Parameters:
+Optional query parameter: "limit" (Int) - The maximum number of games to retrieve.
+Handler function: Calls DatabaseConnector.getGames(limit) which returns a list of Game.
+Response: The list of games is processed using MlbService.getGames(games).
 
+## GET /games/teams/:team - All games per teams
+Description: Retrieves all games for a specific team.
+Parameters:
+team (String) - The team for which to retrieve games.
+Optional query parameters:
+"limit" (Int) - The maximum number of games to retrieve.
+"filter" (String) - A filtering parameter for games.
+Handler function: Calls DatabaseConnector.allMatches(team, limit, filter) which returns a list of Game.
+Response: The list of games is processed using MlbService.getGames(games).
 *Note: You can make the queries with the postman collection in the data folder. These endpoints allow you to make the requested queries and display the results. All data comes from the dataset.*
 
 
